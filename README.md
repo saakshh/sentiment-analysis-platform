@@ -3,6 +3,16 @@
 This is a full-stack web application that fetches historical financial news for a given stock ticker, performs sentiment analysis on the headlines using a FinBERT model, and displays the daily average sentiment on an interactive dashboard.
 
 ---
+## Purpose & Insights
+
+This tool is designed to provide a quick, visual understanding of the media sentiment surrounding a public company. By selecting a stock ticker and fetching the 7-day history, a user can instantly see:
+
+- **Sentiment Trend:** Whether the news narrative for the stock has been trending positive, negative, or neutral over the past week.
+- **Daily Average Score:** A single, aggregated score for each day, which smooths out the noise from individual articles and provides a clearer picture of that day's overall tone.
+
+Essentially, this platform helps answer the question: **"What has the general feeling of the news been for this company recently?"**
+
+---
 
 ## System Architecture
 
@@ -11,8 +21,6 @@ The application consists of three main components that work together:
 1.  **Frontend:** A static web page built with HTML and vanilla JavaScript. It uses Chart.js for data visualization.
 2.  **Backend API:** A Python backend built with FastAPI that serves the frontend, provides data endpoints, and communicates with the database.
 3.  **Database:** A PostgreSQL database managed by Docker, used to store and retrieve historical sentiment analysis results.
-
-![Architecture Diagram](https://i.imgur.com/uG9Xl6O.png)
 
 ---
 
