@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Sentiment Dashboard</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    
+    <style>
+        /* Use the new font and set a background color for the page */
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 2rem;
+        }
+        /* Create a main container for the dashboard */
+        .dashboard-container {
+            max-width: 900px;
+            margin: auto;
+            padding: 2rem;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        /* Style the header */
+        h1 {
+            text-align: center;
+            color: #1f2937;
+        }
+        /* Style the controls section */
+        .controls { 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px; 
+            gap: 15px; /* Adds space between items */
+        }
+        /* Style the button */
+        button { 
+            font-size: 0.9em; 
+            font-weight: bold;
+            padding: 10px 15px; 
+            cursor: pointer; 
+            border-radius: 6px;
+            border: none;
+            background-color: #3b82f6;
+            color: white;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #2563eb;
+        }
+        button:disabled {
+            background-color: #9ca3af;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <h1>Market Sentiment Dashboard</h1>
+
+    <div class="controls">
+        <label for="ticker-select">Choose a ticker:</label>
+        <select id="ticker-select">
+            <option value="TSLA">Tesla (TSLA)</option>
+            <option value="AAPL">Apple (AAPL)</option>
+            <option value="NVDA">NVIDIA (NVDA)</option>
+            <option value="MSFT">Microsoft (MSFT)</option>
+            <option value="GOOGL">Google (GOOGL)</option>
+        </select>
+        <button id="fetch-button">Fetch & Display Sentiment</button>
+    </div>
+
+    <div class="chart-container">
+        <canvas id="sentimentChart"></canvas>
+    </div>
+
+    <script>
+        const tickerSelect = document.getElementById('ticker-select');
+        const fetchButton = document.getElementById('fetch-button');
+        const canvas = document.getElementById('sentimentChart');
+        const ctx = canvas.getContext('2d');
+        let sentimentChart;
+
+        const drawChart = async (ticker) => {
+            if (sentimentChart) { sentimentChart.destroy(); }
+            const response = await fetch(`/sentiment/${ticker}`);
+            const rawData = await response.json();
+
+            if (rawData.length === 0) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.font = "20px sans-serif";
+                ctx.textAlign = "center";
+                ctx.fillText(`No data found. Click button to fetch history.`, canvas.width / 2, 50);
+                return;
+            }
+
+            const dailyScores = {};
+            rawData.forEach(item => {
+                const date = item.published_at.split('T')[0];
+                if (!dailyScores[date]) { dailyScores[date] = []; }
+                dailyScores[date].push((item.sentiment_label === 'positive' ? 1 : item.sentiment_label === 'negative' ? -1 : 0) * item.sentiment_score);
+            });
+
+            const chartData = Object.keys(dailyScores).map(date => {
+                const scores = dailyScores[date];
+                const averageScore = scores.reduce((a, b) => a + b, 0) / scores.length;
+                return { x: new Date(date), y: averageScore };
+            }).sort((a, b) => a.x - b.x);
+
+            sentimentChart = new Chart(ctx, {
+                type: 'line',
+                data: { datasets: [{ label: `Daily Average Sentiment for ${ticker}`, data: chartData, borderColor: 'rgb(75, 192, 192)', tension: 0.1 }] },
+                options: {
+                    scales: {
+                        x: { type: 'time', time: { unit: 'day', tooltipFormat: 'MMM dd, yyyy' }, title: { display: true, text: 'Date' } },
+                        y: { title: { display: true, text: 'Average Sentiment Score' }, min: -1, max: 1 }
+                    }
+                }
+            });
+        };
+
+        // Simplified event listener for the single button
+        fetchButton.addEventListener('click', async () => {
+            const selectedTicker = tickerSelect.value;
+            fetchButton.textContent = 'Fetching 7-Day History...';
+            fetchButton.disabled = true;
+
+            await fetch(`/fetch-news/${selectedTicker}`);
+            await drawChart(selectedTicker);
+
+            fetchButton.textContent = 'Fetch & Display Sentiment';
+            fetchButton.disabled = false;
+        });
+    </script>
+</body>
+</html>
